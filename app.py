@@ -130,6 +130,7 @@ if not show_options:
     st.error('No KZFR shows found in the current Studio Creek archive.')
     st.stop()
 
+st.experimental_set_query_params()
 query_params = st.experimental_get_query_params()
 
 try:
@@ -145,8 +146,6 @@ show_selected = st.selectbox(
 )
 
 if show_selected and show_selected != '-':
-    st.experimental_set_query_params(show_selected=show_selected)
-
     filtered_df = archives_df[archives_df['title'] == show_selected]
 
     if len(filtered_df) == 0:
