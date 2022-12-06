@@ -146,6 +146,8 @@ show_selected = st.selectbox(
 )
 
 if show_selected and show_selected != '-':
+    st.experimental_set_query_params(show_selected=show_selected)
+
     filtered_df = archives_df[archives_df['title'] == show_selected]
 
     if len(filtered_df) == 0:
