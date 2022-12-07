@@ -335,7 +335,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
             with col_2:
                 show_time = st.time_input(
                     label=(
-                        f'What time (in PST) did the {st.session_state.show_selected} show occur?',
+                        f'What time (in PST) did the {st.session_state.show_selected} show occur?'
                     ),
                     **(
                         {'value': query_params_time_selected_datetime}
