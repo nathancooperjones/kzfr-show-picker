@@ -1,3 +1,4 @@
+# TODO: fix date formatting in show titles
 from datetime import datetime
 import json
 import re
@@ -134,7 +135,20 @@ def check_if_url_exists(url: str) -> bool:
         return False
 
 
+def display_audio_stream(url: str) -> None:
+    """Write the markdown needed to display the audio stream at url ``url``."""
+    st.markdown('**Episode Audio Stream**:')
+    st.audio(data=url)
+    st.markdown(f'... or download the audio from the URL here: {url}')
+
+
 show_titles, archives_df = read_studio_creek_website_data()
+
+
+SHOW_TIME_SELECTION_OPTIONS = [
+    'Search for a show in the archive',
+    'Search for a show NOT in the archive',
+]
 
 
 show_options = ['-'] + show_titles
@@ -175,7 +189,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
     st.experimental_set_query_params()
 
     filtered_df = archives_df[archives_df['title'] == st.session_state.show_selected]
-    time_options = ['-'] + filtered_df['start_readable'].unique().tolist()
+    time_options = filtered_df['start_readable'].unique().tolist()
 
     if not st.session_state.get('show_time_selection'):
         try:
@@ -185,17 +199,13 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
             query_params_show_time_selection_idx = 0
 
     if st.first_time_running and 'query_params_show_time_selection_idx' in locals():
-        st.session_state.show_time_selection = [
-            'Search for a show in the archive',
-            'Search for a show NOT in the archive',
-        ][query_params_show_time_selection_idx]
+        st.session_state.show_time_selection = (
+            SHOW_TIME_SELECTION_OPTIONS[query_params_show_time_selection_idx]
+        )
     else:
         st.session_state.show_time_selection = st.radio(
             label='How would you like to find the show time?',
-            options=[
-                'Search for a show in the archive',
-                'Search for a show NOT in the archive',
-            ],
+            options=SHOW_TIME_SELECTION_OPTIONS,
             **(
                 {'index': query_params_show_time_selection_idx}
                 if 'query_params_show_time_selection_idx' in locals()
@@ -203,32 +213,17 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
             ),
         )
 
-    if st.session_state.show_time_selection == 'Search for a show in the archive':
-        if len(time_options) <= 1:
+    if st.session_state.show_time_selection == SHOW_TIME_SELECTION_OPTIONS[0]:
+        if not time_options:
             st.error(
                 f'No "{st.session_state.show_selected}" show times found in the current Studio '
                 'Creek archive.'
             )
         else:
-            if not st.session_state.get('time_selected'):
-                try:
-                    query_params_time_selected = query_params['time_selected'][0]
-                    time_selected_idx = time_options.index(query_params_time_selected)
-                except (IndexError, KeyError, ValueError):
-                    time_selected_idx = 0
-
-            if st.first_time_running and 'time_selected_idx' in locals():
-                st.session_state.time_selected = time_options[time_selected_idx]
-            else:
-                st.session_state.time_selected = st.selectbox(
-                    label='Select a show time to view',
-                    options=time_options,
-                    **(
-                        {'index': time_selected_idx}
-                        if 'time_selected_idx' in locals()
-                        else {}
-                    ),
-                )
+            st.session_state.time_selected = st.selectbox(
+                label='Select a show time to view',
+                options=time_options,
+            )
 
             if st.session_state.time_selected and st.session_state.time_selected != '-':
                 # weird note: this has to include what we already set above ¯\_(ツ)_/¯
@@ -264,11 +259,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                 st.markdown('<br>', unsafe_allow_html=True)
 
                 if show_series.get('url'):
-                    st.markdown('**Episode Audio Stream**:')
-                    st.audio(data=show_series['url'])
-                    st.markdown(
-                        body=f'... or download the audio from the URL here: {show_series["url"]}'
-                    )
+                    display_audio_stream(url=show_series['url'])
     else:
         normalized_show_name = (
             re.sub(r'[^\w\s]', '', st.session_state.show_selected)
@@ -279,12 +270,15 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
         if not st.session_state.get('time_selected'):
             try:
                 query_params_time_selected = query_params['time_selected'][0]
+
                 try:
+                    # show time selection option 2
                     query_params_time_selected_datetime = datetime.strptime(
                         query_params_time_selected,
                         '%Y-%m-%d_%H-%M-%S',
                     )
                 except ValueError:
+                    # show time selection option 1
                     query_params_time_selected_datetime = datetime.strptime(
                         query_params_time_selected,
                         '%m/%d/%Y @ %I:%M %p',
@@ -295,8 +289,21 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
         col_1, col_2 = st.columns(spec=2)
 
         if st.first_time_running and 'query_params_time_selected' in locals():
-            st.session_state.time_selected = query_params_time_selected
+            st.session_state.time_selected = (
+                query_params_time_selected_datetime.strftime('%Y-%m-%d_%H-%M-%S')
+            )
         else:
+            filtered_df = archives_df[archives_df['title'] == st.session_state.show_selected]
+
+            if len(filtered_df) > 0:
+                try:
+                    first_found_show_time = filtered_df['start'].iloc[0]
+
+                    if 'query_params_time_selected_datetime' not in locals():
+                        query_params_time_selected_datetime = first_found_show_time
+                except IndexError:
+                    pass
+
             with col_1:
                 show_date = st.date_input(
                     label='What day did the show occur?',
@@ -333,9 +340,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
         if check_if_url_exists(url=url):
             st.markdown(f'## {st.session_state.show_selected} @ {st.session_state.time_selected}')
-            st.markdown('**Episode Audio Stream**:')
-            st.audio(data=url)
-            st.markdown(f'... or download the audio from the URL here: {url}')
+            display_audio_stream(url=url)
         else:
             st.error(
                 f'No show found at the date and time {st.session_state.time_selected}. Please try '
