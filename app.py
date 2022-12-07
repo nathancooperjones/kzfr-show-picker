@@ -1,4 +1,3 @@
-# TODO: fix when a new URL is opened and any selection resets everything
 from datetime import datetime
 import json
 import re
@@ -151,7 +150,7 @@ if len(st.session_state) == 0:
     query_params = st.experimental_get_query_params()
 
     # ugh... Streamlit workarounds I guess
-    if len(query_params) == 3:
+    if len(query_params) == 2:
         st.first_time_running = True
 
 if not st.session_state.get('show_selected'):
@@ -170,6 +169,8 @@ else:
         **({'index': show_selected_idx} if 'show_selected_idx' in locals() else {}),
     )
 
+st.experimental_set_query_params()
+
 if st.session_state.show_selected and st.session_state.show_selected != '-':
     st.experimental_set_query_params()
 
@@ -178,12 +179,8 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
     if not st.session_state.get('show_time_selection'):
         try:
-            query_params_show_time_selection = query_params['show_time_in_archive'][0]
-            query_params_show_time_selection_idx = (
-                1
-                if query_params_show_time_selection != 'True'
-                else 0
-            )
+            query_params_show_time_selection = query_params['time_selected'][0]
+            query_params_show_time_selection_idx = 1
         except (IndexError, KeyError, ValueError):
             query_params_show_time_selection_idx = 0
 
@@ -237,7 +234,6 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                 # weird note: this has to include what we already set above ¯\_(ツ)_/¯
                 st.experimental_set_query_params(
                     show_selected=st.session_state.show_selected,
-                    show_time_in_archive=True,
                     time_selected=st.session_state.time_selected,
                 )
 
@@ -283,10 +279,16 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
         if not st.session_state.get('time_selected'):
             try:
                 query_params_time_selected = query_params['time_selected'][0]
-                query_params_time_selected_datetime = datetime.strptime(
-                    query_params_time_selected,
-                    '%Y-%m-%d_%H-%M-%S',
-                )
+                try:
+                    query_params_time_selected_datetime = datetime.strptime(
+                        query_params_time_selected,
+                        '%Y-%m-%d_%H-%M-%S',
+                    )
+                except ValueError:
+                    query_params_time_selected_datetime = datetime.strptime(
+                        query_params_time_selected,
+                        '%m/%d/%Y @ %I:%M %p',
+                    )
             except (IndexError, KeyError, ValueError):
                 query_params_time_selected_datetime = None
 
@@ -321,7 +323,6 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
         # weird note: this has to include what we already set above ¯\_(ツ)_/¯
         st.experimental_set_query_params(
             show_selected=st.session_state.show_selected,
-            show_time_in_archive=False,
             time_selected=st.session_state.time_selected,
         )
 
