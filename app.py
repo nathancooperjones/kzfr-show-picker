@@ -9,7 +9,20 @@ import requests
 import streamlit as st
 
 
-st.set_page_config(page_title='KZFR Show Getter', page_icon='📻')
+st.set_page_config(
+    page_title='KZFR Show Getter',
+    page_icon='📻',
+    menu_items={
+        'Get help': None,
+        'Report a Bug': 'https://github.com/nathancooperjones/kzfr-show-picker/issues',
+        'About': (
+            'An alternative to the Studio Creek KZFR archive found here: '
+            'https://kzfr.studio.creek.org/archives/. In comparison, this website lets you find '
+            'show archives that might not be visible in the archive AND create a static URL that '
+            'you can share out with others that leads directly to the show you find - beautiful!'
+        ),
+    }
+)
 
 
 hide_streamlit_style = """
@@ -43,7 +56,7 @@ def make_request(url: str) -> Dict[str, Any]:
     return response_dict
 
 
-@st.cache(persist=True, ttl=(60 * 15))  # refresh every ``15`` minutes
+@st.cache(persist=True, show_spinner=False, ttl=(60 * 15))  # refresh every ``15`` minutes
 def read_studio_creek_website_data() -> pd.DataFrame:
     """
     Parse the Studio Creek APIs for both show names and archives.
@@ -78,50 +91,56 @@ def read_studio_creek_website_data() -> pd.DataFrame:
             * url: str
 
     """
-    shows_dict = make_request(url='https://kzfr.studio.creek.org/api/archives/shows-list')
+    with st.spinner(text='Refreshing our show list with the Studio Creek archives...'):
+        shows_dict = make_request(url='https://kzfr.studio.creek.org/api/archives/shows-list')
 
-    archives_dict_data = list()
-    archives_page = 1
+        archives_dict_data = list()
+        archives_page = 1
 
-    while True:
-        archives_dict = make_request(
-            url=f'https://kzfr.studio.creek.org/api/archives?page={archives_page}',
-        )
-        archives_dict_data += archives_dict['data']
+        while True:
+            archives_dict = make_request(
+                url=f'https://kzfr.studio.creek.org/api/archives?page={archives_page}',
+            )
+            archives_dict_data += archives_dict['data']
 
-        if archives_dict['links'].get('next'):
-            archives_page += 1
-        else:
-            break
+            if archives_dict['links'].get('next'):
+                archives_page += 1
+            else:
+                break
 
-    # prep show titles
-    show_titles = sorted(set([x['title'] for x in shows_dict['data']]))
+        # prep show titles
+        show_titles = sorted(set([x['title'] for x in shows_dict['data']]))
 
-    # prep archives data
-    archives_dict_data_subset = [
-        {
-            'id': data['id'],
-            'start': data['start'],
-            'end': data['end'],
-            'title': data['show']['title'],
-            'name': data['show']['name'],
-            'summary': data['show']['summary'],
-            'description': data['show']['description'],
-            'image_url': data['image']['url'],
-            'filesize': data['audio']['filesize'],
-            'url': data['audio']['url'],
-        }
-        for data in archives_dict_data
-    ]
+        # prep archives data
+        archives_dict_data_subset = [
+            {
+                'id': data['id'],
+                'start': data['start'],
+                'end': data['end'],
+                'title': data['show']['title'],
+                'name': data['show']['name'],
+                'summary': data['show']['summary'],
+                'description': data['show']['description'],
+                'image_url': data['image']['url'],
+                'filesize': data['audio']['filesize'],
+                'url': data['audio']['url'],
+            }
+            for data in archives_dict_data
+        ]
 
-    archives_df = pd.DataFrame(data=archives_dict_data_subset)
+        archives_df = pd.DataFrame(data=archives_dict_data_subset)
 
-    for col in ['start', 'end']:
-        archives_df[col] = pd.to_datetime(archives_df[col], utc=True).dt.tz_convert('US/Pacific')
+        for col in ['start', 'end']:
+            archives_df[col] = (
+                pd
+                .to_datetime(archives_df[col], utc=True)
+                .dt
+                .tz_convert('US/Pacific')
+            )
 
-    archives_df['start_readable'] = archives_df['start'].dt.strftime('%m/%d/%Y @ %I:%M %p')
+        archives_df['start_readable'] = archives_df['start'].dt.strftime('%m/%d/%Y @ %I:%M %p')
 
-    return show_titles, archives_df
+        return show_titles, archives_df
 
 
 def check_if_url_exists(url: str) -> bool:
@@ -177,7 +196,7 @@ if st.first_time_running and 'show_selected_idx' in locals():
     st.session_state.show_selected = show_options[show_selected_idx]
 else:
     st.session_state.show_selected = st.selectbox(
-        label='Select a show name to view',
+        label='Select a KZFR show name',
         options=show_options,
         **({'index': show_selected_idx} if 'show_selected_idx' in locals() else {}),
     )
@@ -220,7 +239,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
             )
         else:
             st.session_state.time_selected = st.selectbox(
-                label='Select a show time to view',
+                label=f'Select a {st.session_state.show_selected} show date',
                 options=time_options,
             )
 
@@ -306,7 +325,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
             with col_1:
                 show_date = st.date_input(
-                    label='What day did the show occur?',
+                    label=f'What day did the {st.session_state.show_selected} show occur?',
                     **(
                         {'value': query_params_time_selected_datetime}
                         if 'query_params_time_selected_datetime' in locals()
@@ -315,7 +334,9 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                 )
             with col_2:
                 show_time = st.time_input(
-                    label='What time (in PST) did the show occur?',
+                    label=(
+                        f'What time (in PST) did the {st.session_state.show_selected} show occur?',
+                    ),
                     **(
                         {'value': query_params_time_selected_datetime}
                         if 'query_params_time_selected_datetime' in locals()
