@@ -222,7 +222,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
         )
     else:
         st.session_state.show_time_selection = st.radio(
-            label='How would you like to find the show time?',
+            label=f'How would you like to find the show time for {st.session_state.show_selected}?',
             options=SHOW_TIME_SELECTION_OPTIONS,
             **(
                 {'index': query_params_show_time_selection_idx}
