@@ -325,7 +325,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
             with col_1:
                 show_date = st.date_input(
-                    label=f'What day did the {st.session_state.show_selected} show occur?',
+                    label='What day did the show occur?',
                     **(
                         {'value': query_params_time_selected_datetime}
                         if 'query_params_time_selected_datetime' in locals()
@@ -334,9 +334,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                 )
             with col_2:
                 show_time = st.time_input(
-                    label=(
-                        f'What time (in PST) did the {st.session_state.show_selected} show occur?'
-                    ),
+                    label='What time (in PST) did the show occur?',
                     **(
                         {'value': query_params_time_selected_datetime}
                         if 'query_params_time_selected_datetime' in locals()
