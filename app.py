@@ -1,4 +1,3 @@
-# TODO: fix date formatting in show titles
 from datetime import datetime
 import json
 import re
@@ -240,7 +239,8 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                     .iloc[0]
                 )
 
-                st.markdown(f'## {show_series.get("title")} @ {st.session_state.time_selected}')
+                st.markdown(f'## {show_series.get("title")}')
+                st.markdown(f'##### {st.session_state.time_selected}')
 
                 st.image(image=show_series['image_url'])
 
@@ -339,7 +339,14 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
         )
 
         if check_if_url_exists(url=url):
-            st.markdown(f'## {st.session_state.show_selected} @ {st.session_state.time_selected}')
+            # to be consistent
+            time_selected_to_display = (
+                datetime.strptime(st.session_state.time_selected, '%Y-%m-%d_%H-%M-%S')
+                .strftime('%m/%d/%Y @ %I:%M %p')
+            )
+
+            st.markdown(f'## {st.session_state.show_selected}')
+            st.markdown(f'##### {time_selected_to_display}')
             display_audio_stream(url=url)
         else:
             st.error(
