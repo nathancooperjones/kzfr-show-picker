@@ -1,4 +1,4 @@
-# TODO: leave comments for every ``else`` to make it less confusing
+# TODO: mention start date as 8/8/22
 from datetime import datetime
 import json
 import re
@@ -57,7 +57,7 @@ def make_request(url: str) -> Dict[str, Any]:
     return response_dict
 
 
-@st.cache(persist=True, show_spinner=False, ttl=(60 * 15))  # refresh every ``15`` minutes
+@st.cache(show_spinner=False, ttl=(60 * 15))  # refresh every ``15`` minutes
 def read_studio_creek_website_data() -> pd.DataFrame:
     """
     Parse the Studio Creek APIs for both show names and archives.
@@ -296,7 +296,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
                 if show_series.get('url'):
                     display_audio_stream(url=show_series['url'])
-    else:
+    elif st.session_state.show_time_selection == SHOW_TIME_SELECTION_OPTIONS[1]:
         normalized_show_name = (
             re.sub(r'[^\w\s]', '', st.session_state.show_selected)
             .replace('  ', ' ')
