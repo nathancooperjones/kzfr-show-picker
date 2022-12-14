@@ -1,4 +1,4 @@
-# TODO: mention start date as 8/8/22
+# TODO: add logo from show if possible
 from datetime import datetime
 import json
 import re
@@ -11,7 +11,7 @@ import streamlit as st
 
 
 st.set_page_config(
-    page_title='KZFR Show Getter',
+    page_title='KZFR Show Picker',
     page_icon='📻',
     menu_items={
         'Get help': None,
@@ -359,6 +359,11 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                         else {}
                     ),
                 )
+
+            st.caption(
+                "Note that shows aired earlier than ``8/8/22`` will NOT appear in Studio Creek's "
+                'database.'
+            )
 
             st.session_state.time_selected = (
                 f'{show_date.strftime("%Y-%m-%d")}_{show_time.strftime("%H-%M-%S")}'
