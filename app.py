@@ -1,10 +1,10 @@
-# TODO: add logo from show if possible
 from datetime import datetime
 import json
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Union
 from urllib.request import Request, urlopen
 
+from hurry.filesize import size
 import pandas as pd
 import requests
 import streamlit as st
@@ -57,7 +57,7 @@ def make_request(url: str) -> Dict[str, Any]:
     return response_dict
 
 
-@st.cache(show_spinner=False, ttl=(60 * 15))  # refresh every ``15`` minutes
+@st.experimental_memo(show_spinner=False, ttl=(60 * 15))  # refresh every ``15`` minutes
 def read_studio_creek_website_data() -> pd.DataFrame:
     """
     Parse the Studio Creek APIs for both show names and archives.
@@ -154,27 +154,49 @@ def check_if_url_exists(url: str) -> bool:
         return False
 
 
-def display_audio_stream(url: str) -> None:
+def display_audio_stream(url: str, filesize: Optional[int] = None) -> None:
     """Write the markdown needed to display the audio stream at url ``url``."""
     st.markdown('**Episode Audio Stream**:')
     st.audio(data=url)
-    st.markdown(f'... or download the audio from the URL here: {url}')
+
+    if filesize:
+        st.markdown(f'... or download the audio from the URL here ({size(filesize)}): {url}')
+    else:
+        st.markdown(f'... or download the audio from the URL here: {url}')
 
 
-def display_audio_stream_for_non_archive_date(url: str) -> None:
-    """
-    Code block to display the stream title and audio archive for a date not selected in the archive
-    list.
+def display_stream_with_metadata(
+    title: str,
+    time_selected: Union[str, datetime],
+    image_url: Optional[str] = None,
+    summary: Optional[str] = None,
+    description: Optional[str] = None,
+    url: Optional[str] = None,
+    filesize: Optional[str] = None,
+) -> None:
+    """Render the markdown to display any provided show's metadata followed by the stream audio."""
+    st.markdown(f'## {title}')
+    st.markdown(f'##### {time_selected}')
 
-    """
-    time_selected_to_display = (
-        datetime.strptime(st.session_state.time_selected, '%Y-%m-%d_%H-%M-%S')
-        .strftime('%m/%d/%Y @ %I:%M %p')
-    )
+    if image_url:
+        st.image(image=image_url)
 
-    st.markdown(f'## {st.session_state.show_selected}')
-    st.markdown(f'##### {time_selected_to_display}')
-    display_audio_stream(url=url)
+    if summary:
+        st.markdown(
+            body=f'**Show Summary**: {summary}',
+            unsafe_allow_html=True,
+        )
+
+    if description:
+        st.markdown(
+            body=f'**Show Description**: {description}',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown('<br>', unsafe_allow_html=True)
+
+    if url:
+        display_audio_stream(url=url, filesize=filesize)
 
 
 show_titles, archives_df = read_studio_creek_website_data()
@@ -275,27 +297,15 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                     .iloc[0]
                 )
 
-                st.markdown(f'## {show_series.get("title")}')
-                st.markdown(f'##### {st.session_state.time_selected}')
-
-                st.image(image=show_series['image_url'])
-
-                if show_series.get('summary'):
-                    st.markdown(
-                        body=f'**Show Summary**: {show_series["summary"]}',
-                        unsafe_allow_html=True,
-                    )
-
-                if show_series.get('description'):
-                    st.markdown(
-                        body=f'**Show Description**: {show_series["description"]}',
-                        unsafe_allow_html=True,
-                    )
-
-                st.markdown('<br>', unsafe_allow_html=True)
-
-                if show_series.get('url'):
-                    display_audio_stream(url=show_series['url'])
+                display_stream_with_metadata(
+                    title=show_series.get('title'),
+                    time_selected=st.session_state.time_selected,
+                    image_url=show_series.get('image_url'),
+                    summary=show_series.get('summary'),
+                    description=show_series.get('description'),
+                    url=show_series.get('url'),
+                    filesize=show_series.get('filesize'),
+                )
     elif st.session_state.show_time_selection == SHOW_TIME_SELECTION_OPTIONS[1]:
         normalized_show_name = (
             re.sub(r'[^\w\s]', '', st.session_state.show_selected)
@@ -325,13 +335,24 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
         col_1, col_2 = st.columns(spec=2)
 
+        filtered_df = archives_df[archives_df['title'] == st.session_state.show_selected]
+
+        image_url = None
+        summary = None
+        description = None
+
+        if len(filtered_df) > 0:
+            filtered_df_row = filtered_df.iloc[0]
+
+            image_url = filtered_df_row['image_url']
+            summary = filtered_df_row['summary']
+            description = filtered_df_row['description']
+
         if st.first_time_running and 'query_params_time_selected' in locals():
             st.session_state.time_selected = (
                 query_params_time_selected_datetime.strftime('%Y-%m-%d_%H-%M-%S')
             )
         else:
-            filtered_df = archives_df[archives_df['title'] == st.session_state.show_selected]
-
             if len(filtered_df) > 0:
                 try:
                     first_found_show_time = filtered_df['start'].iloc[0]
@@ -380,35 +401,40 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
             f'{normalized_show_name}/{normalized_show_name}_{st.session_state.time_selected}.mp3'
         )
 
+        time_selected_to_display = (
+            datetime.strptime(st.session_state.time_selected, '%Y-%m-%d_%H-%M-%S')
+            .strftime('%m/%d/%Y @ %I:%M %p')
+        )
+
+        filesize_df = archives_df[archives_df['url'] == url]
+
+        filesize = None
+
+        if len(filesize_df) > 0:
+            filesize = filesize_df['filesize'].iloc[0]
+
         if check_if_url_exists(url=url):
-            # to be consistent
-            display_audio_stream_for_non_archive_date(url=url)
-        elif normalized_show_name == 'peace-and-social-justice':
-            # weird PSJ-edge cases 1
-            url = f'https://media.kzfr.org/audio/psj/psj_{st.session_state.time_selected}.mp3'
-
-            if check_if_url_exists(url=url):
-                # to be consistent
-                # TODO: make this into a function
-                display_audio_stream_for_non_archive_date(url=url)
-            else:
-                # weird PSJ-edge cases 2
-                url = f'https://media.kzfr.org/audio/{st.session_state.time_selected}.mp3'
-
-                if check_if_url_exists(url=url):
-                    # to be consistent
-                    # TODO: make this into a function
-                    display_audio_stream_for_non_archive_date(url=url)
-                else:
-                    st.error(
-                        f'No PSJ show found at the date and time {st.session_state.time_selected}. '
-                        'Please try again with new options.'
-                    )
+            display_stream_with_metadata(
+                title=st.session_state.show_selected,
+                time_selected=time_selected_to_display,
+                image_url=image_url,
+                summary=summary,
+                description=description,
+                url=url,
+                filesize=filesize,
+            )
         else:
             st.error(
                 f'No show found at the date and time {st.session_state.time_selected}. '
                 'Please try again with new options.'
             )
+
+st.markdown('-----')
+
+st.caption(
+    'Find more about KZFR and their shows on their official website: '
+    '[kzfr.org](http://www.kzfr.org)!'
+)
 
 if st.first_time_running:
     # this just re-runs the app
