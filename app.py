@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import re
 from typing import Any, Dict, Optional, Union
@@ -381,10 +381,9 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                     ),
                 )
 
-            two_weeks_ago_formatted = (datetime.now() - timedelta(weeks=2)).strftime('%m/%d/%y')
             st.caption(
-                f'Note that shows aired earlier than ``{two_weeks_ago_formatted}`` MAY not appear '
-                "in Studio Creek's database."
+                "Note that shows aired earlier than ``8/8/22`` MAY NOT appear in Studio Creek's "
+                'database.'
             )
 
             st.session_state.time_selected = (
