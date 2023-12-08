@@ -57,7 +57,7 @@ def make_request(url: str) -> Dict[str, Any]:
     return response_dict
 
 
-@st.experimental_memo(show_spinner=False, ttl=(60 * 15))  # refresh every ``15`` minutes
+@st.cache_data(show_spinner=False, ttl=(60 * 15))  # refresh every ``15`` minutes
 def read_studio_creek_website_data() -> pd.DataFrame:
     """
     Parse the Studio Creek APIs for both show names and archives.
