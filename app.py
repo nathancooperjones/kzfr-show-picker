@@ -396,6 +396,56 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
             time_selected=st.session_state.time_selected,
         )
 
+        # ugh what a stupid hack
+        philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict = {
+            '2023-11-09_17-00-00': '2023-11-16_17-00-00',
+            '2023-10-26_17-00-00': '2023-11-02_17-00-00',
+            '2023-10-12_17-00-00': '2023-10_19-17-00-00',
+            '2023-09-28_17-00-00': '2023-10_05-17-00-00',
+            '2023-09-14_17-00-00': '2023-09_21-17-00-00',
+            '2023-08-31_17-00-00': '2023-09_07-17-00-00',
+            '2023-08-17_17-00-00': '2023-08-24_17-00-00',
+            '2023-08-03_17-00-00': '2023-08-10_17-00-00',
+            '2023-07-20_17-00-00': '2023-07-27_17-00-00',
+        }
+        whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict = {
+            v: k
+            for k, v in (
+                philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict.items()
+            )
+        }
+
+        if normalized_show_name == 'philosophers-on-culture':
+            if (
+                st.session_state.time_selected
+                in philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict
+            ):
+                normalized_show_name = 'whats-the-frequency-kenneth'
+            elif (
+                st.session_state.time_selected
+                in whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict
+            ):
+                st.session_state.time_selected = (
+                    whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict[
+                        st.session_state.time_selected
+                    ]
+                )
+        elif normalized_show_name == 'whats-the-frequency-kenneth':
+            if (
+                st.session_state.time_selected
+                in whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict
+            ):
+                normalized_show_name = 'philosophers-on-culture'
+            elif (
+                st.session_state.time_selected
+                in philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict
+            ):
+                st.session_state.time_selected = (
+                    philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict[
+                        st.session_state.time_selected
+                    ]
+                )
+
         url = (
             'https://kzfr-media.s3.us-west-000.backblazeb2.com/audio/'
             f'{normalized_show_name}/{normalized_show_name}_{st.session_state.time_selected}.mp3'
