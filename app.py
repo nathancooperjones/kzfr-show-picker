@@ -208,7 +208,7 @@ SHOW_TIME_SELECTION_OPTIONS = [
 ]
 
 
-show_options = ['-'] + show_titles
+show_options = show_titles
 
 if len(show_options) <= 1:
     st.error('No KZFR shows found in the current Studio Creek archive.')
@@ -226,23 +226,21 @@ if len(st.session_state) == 0:
 
 if not st.session_state.get('show_selected'):
     try:
-        query_params_show_selected = query_params['show_selected'][0]
+        query_params_show_selected = query_params['show_selected']
         show_selected_idx = show_options.index(query_params_show_selected)
     except (IndexError, KeyError, ValueError):
-        show_selected_idx = 0
+        show_selected_idx = None
 
-if st.first_time_running and 'show_selected_idx' in locals():
-    st.session_state.show_selected = show_options[show_selected_idx]
-else:
-    st.session_state.show_selected = st.selectbox(
-        label='Select a KZFR show name',
-        options=show_options,
-        **({'index': show_selected_idx} if 'show_selected_idx' in locals() else {}),
-    )
+st.selectbox(
+    label='Select a KZFR show name',
+    options=show_options,
+    index=show_selected_idx if 'show_selected_idx' in locals() else None,
+    key='show_selected',
+)
 
 st.query_params.clear()
 
-if st.session_state.show_selected and st.session_state.show_selected != '-':
+if st.session_state.show_selected:
     st.query_params.clear()
 
     filtered_df = archives_df[archives_df['title'] == st.session_state.show_selected]
@@ -250,7 +248,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
     if not st.session_state.get('show_time_selection'):
         try:
-            query_params_show_time_selection = query_params['time_selected'][0]
+            query_params_show_time_selection = query_params['time_selected']
             query_params_show_time_selection_idx = 1
         except (IndexError, KeyError, ValueError):
             query_params_show_time_selection_idx = 0
@@ -282,7 +280,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
                 options=time_options,
             )
 
-            if st.session_state.time_selected and st.session_state.time_selected != '-':
+            if st.session_state.time_selected:
                 # weird note: this has to include what we already set above ¯\_(ツ)_/¯
                 st.query_params.from_dict(
                     params={
@@ -318,7 +316,7 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
         if not st.session_state.get('time_selected'):
             try:
-                query_params_time_selected = query_params['time_selected'][0]
+                query_params_time_selected = query_params['time_selected']
 
                 try:
                     # show time selection option 2
