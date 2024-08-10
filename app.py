@@ -218,7 +218,7 @@ query_params = {}
 st.first_time_running = False
 
 if len(st.session_state) == 0:
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params.to_dict()
 
     # ugh... Streamlit workarounds I guess
     if len(query_params) == 2:
@@ -240,10 +240,10 @@ else:
         **({'index': show_selected_idx} if 'show_selected_idx' in locals() else {}),
     )
 
-st.experimental_set_query_params()
+st.query_params.clear()
 
 if st.session_state.show_selected and st.session_state.show_selected != '-':
-    st.experimental_set_query_params()
+    st.query_params.clear()
 
     filtered_df = archives_df[archives_df['title'] == st.session_state.show_selected]
     time_options = filtered_df['start_readable'].unique().tolist()
@@ -284,9 +284,11 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
 
             if st.session_state.time_selected and st.session_state.time_selected != '-':
                 # weird note: this has to include what we already set above ¯\_(ツ)_/¯
-                st.experimental_set_query_params(
-                    show_selected=st.session_state.show_selected,
-                    time_selected=st.session_state.time_selected,
+                st.query_params.from_dict(
+                    params={
+                        'show_selected': st.session_state.show_selected,
+                        'time_selected': st.session_state.time_selected,
+                    },
                 )
 
                 # select the first show with the matching time
@@ -391,9 +393,11 @@ if st.session_state.show_selected and st.session_state.show_selected != '-':
             )
 
         # weird note: this has to include what we already set above ¯\_(ツ)_/¯
-        st.experimental_set_query_params(
-            show_selected=st.session_state.show_selected,
-            time_selected=st.session_state.time_selected,
+        st.query_params.from_dict(
+            params={
+                'show_selected': st.session_state.show_selected,
+                'time_selected': st.session_state.time_selected,
+            },
         )
 
         # ugh what a stupid hack
