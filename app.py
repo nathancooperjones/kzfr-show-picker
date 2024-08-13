@@ -13,6 +13,7 @@ import streamlit as st
 st.set_page_config(
     page_title='KZFR Show Picker',
     page_icon='📻',
+    initial_sidebar_state='collapsed',
     menu_items={
         'Get help': None,
         'Report a Bug': 'https://github.com/nathancooperjones/kzfr-show-picker/issues',
@@ -36,22 +37,19 @@ hide_streamlit_style = """
     </style>
 """
 
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(body=hide_streamlit_style, unsafe_allow_html=True)
 
 
 st.image(
     image='https://www.kzfr.org/theme/51/images/header/KZFR_Logo_Color_isolated_full_szie.png',
     width=250,
 )
-st.markdown('# KZFR Show Picker')
+st.markdown(body='# KZFR Show Picker')
 
 
 def make_request(url: str) -> Dict[str, Any]:
     """Make a request to a url ``url`` with proper headings, returning the JSON-ified response."""
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    request = Request(url=url, headers=headers)
-
-    with urlopen(url=request) as fp:
+    with urlopen(url=Request(url=url, headers={'User-Agent': 'Mozilla/5.0'})) as fp:
         response_dict = json.load(fp=fp)
 
     return response_dict
@@ -113,33 +111,32 @@ def read_studio_creek_website_data() -> pd.DataFrame:
         show_titles = sorted(set([x['title'] for x in shows_dict['data']]))
 
         # prep archives data
-        archives_dict_data_subset = [
-            {
-                'id': data['id'],
-                'start': data['start'],
-                'end': data['end'],
-                'title': data['show']['title'],
-                'name': data['show']['name'],
-                'summary': data['show']['summary'],
-                'description': data['show']['description'],
-                'image_url': data['image']['url'],
-                'filesize': data['audio']['filesize'],
-                'url': data['audio']['url'],
-            }
-            for data in archives_dict_data
-        ]
-
-        archives_df = pd.DataFrame(data=archives_dict_data_subset)
-
-        for col in ['start', 'end']:
-            archives_df[col] = (
-                pd
-                .to_datetime(archives_df[col], utc=True)
-                .dt
-                .tz_convert('US/Pacific')
-            )
-
-        archives_df['start_readable'] = archives_df['start'].dt.strftime('%m/%d/%Y @ %I:%M %p')
+        archives_df = pd.DataFrame(
+            data=[
+                {
+                    'id': item['id'],
+                    'start': item['start'],
+                    'end': item['end'],
+                    'title': item['show']['title'],
+                    'name': item['show']['name'],
+                    'summary': item['show']['summary'],
+                    'description': item['show']['description'],
+                    'image_url': item['image']['url'],
+                    'filesize': item['audio']['filesize'],
+                    'url': item['audio']['url'],
+                }
+                for item in archives_dict_data
+            ]
+        )
+        archives_df['start'] = (
+            pd.to_datetime(arg=archives_df['start'], utc=True).dt.tz_convert(tz='US/Pacific')
+        )
+        archives_df['end'] = (
+            pd.to_datetime(arg=archives_df['end'], utc=True).dt.tz_convert(tz='US/Pacific')
+        )
+        archives_df['start_readable'] = (
+            archives_df['start'].dt.strftime(date_format='%m/%d/%Y @ %I:%M %p')
+        )
 
         return show_titles, archives_df
 
@@ -147,22 +144,20 @@ def read_studio_creek_website_data() -> pd.DataFrame:
 def check_if_url_exists(url: str) -> bool:
     """Check if a URL exists or not."""
     try:
-        response = requests.head(url)
-
-        return response.status_code == 200
-    except requests.ConnectionError:
+        return requests.head(url=url).status_code == 200
+    except requests.RequestException:
         return False
 
 
 def display_audio_stream(url: str, filesize: Optional[int] = None) -> None:
     """Write the markdown needed to display the audio stream at url ``url``."""
-    st.markdown('**Episode Audio Stream**:')
+    st.markdown(body='**Episode Audio Stream**:')
     st.audio(data=url)
 
     if filesize:
-        st.markdown(f'... or download the audio from the URL here ({size(filesize)}): {url}')
+        st.markdown(body=f'... or download the audio from the URL here ({size(filesize)}): {url}')
     else:
-        st.markdown(f'... or download the audio from the URL here: {url}')
+        st.markdown(body=f'... or download the audio from the URL here: {url}')
 
 
 def display_stream_with_metadata(
@@ -175,8 +170,8 @@ def display_stream_with_metadata(
     filesize: Optional[str] = None,
 ) -> None:
     """Render the markdown to display any provided show's metadata followed by the stream audio."""
-    st.markdown(f'## {title}')
-    st.markdown(f'##### {time_selected}')
+    st.markdown(body=f'## {title}')
+    st.markdown(body=f'##### {time_selected}')
 
     if image_url:
         st.image(image=image_url)
@@ -193,7 +188,7 @@ def display_stream_with_metadata(
             unsafe_allow_html=True,
         )
 
-    st.markdown('<br>', unsafe_allow_html=True)
+    st.markdown(body='<br>', unsafe_allow_html=True)
 
     if url:
         display_audio_stream(url=url, filesize=filesize)
@@ -258,7 +253,7 @@ if st.session_state.show_selected:
             SHOW_TIME_SELECTION_OPTIONS[query_params_show_time_selection_idx]
         )
     else:
-        st.session_state.show_time_selection = st.radio(
+        st.radio(
             label=f'How would you like to find the show time for {st.session_state.show_selected}?',
             options=SHOW_TIME_SELECTION_OPTIONS,
             **(
@@ -266,6 +261,7 @@ if st.session_state.show_selected:
                 if 'query_params_show_time_selection_idx' in locals()
                 else {}
             ),
+            key='show_time_selection',
         )
 
     if st.session_state.show_time_selection == SHOW_TIME_SELECTION_OPTIONS[0]:
@@ -274,10 +270,12 @@ if st.session_state.show_selected:
                 f'No "{st.session_state.show_selected}" show times found in the current Studio '
                 'Creek archive.'
             )
+            st.stop()
         else:
-            st.session_state.time_selected = st.selectbox(
+            st.selectbox(
                 label=f'Select a {st.session_state.show_selected} show date',
                 options=time_options,
+                key='time_selected',
             )
 
             if st.session_state.time_selected:
@@ -290,22 +288,46 @@ if st.session_state.show_selected:
                 )
 
                 # select the first show with the matching time
-                show_series = (
-                    filtered_df[
-                        filtered_df['start_readable'] == st.session_state.time_selected
-                    ]
-                    .iloc[0]
-                )
+                try:
+                    show_series = (
+                        filtered_df[
+                            filtered_df['start'].dt.strftime('%Y-%m-%d_%H-%M-%S')
+                            == st.session_state.time_selected
+                        ]
+                        .iloc[0]
+                    )
+                except IndexError:
+                    try:
+                        show_series = (
+                            filtered_df[
+                                filtered_df['start_readable'] == st.session_state.time_selected
+                            ]
+                            .iloc[0]
+                        )
+                    except IndexError:
+                        st.error(
+                            f'No show found at the date and time {st.session_state.time_selected}. '
+                            'Please try again with new options.'
+                        )
+                        st.stop()
 
-                display_stream_with_metadata(
-                    title=show_series.get('title'),
-                    time_selected=st.session_state.time_selected,
-                    image_url=show_series.get('image_url'),
-                    summary=show_series.get('summary'),
-                    description=show_series.get('description'),
-                    url=show_series.get('url'),
-                    filesize=show_series.get('filesize'),
-                )
+                if check_if_url_exists(url=show_series.get('url')):
+                    display_stream_with_metadata(
+                        title=show_series.get('title'),
+                        time_selected=st.session_state.time_selected,
+                        image_url=show_series.get('image_url'),
+                        summary=show_series.get('summary'),
+                        description=show_series.get('description'),
+                        url=show_series.get('url'),
+                        filesize=show_series.get('filesize'),
+                    )
+                else:
+                    st.error(
+                        f'No show found at the date and time {st.session_state.time_selected}. '
+                        'Please try again with new options.'
+                    )
+                    st.stop()
+
     elif st.session_state.show_time_selection == SHOW_TIME_SELECTION_OPTIONS[1]:
         normalized_show_name = (
             re.sub(r'[^\w\s]', '', st.session_state.show_selected)
@@ -416,37 +438,18 @@ if st.session_state.show_selected:
                 philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict.items()
             )
         }
+        time_swap_dict = {
+            **philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict,
+            **whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict
+        }
 
-        if normalized_show_name == 'philosophers-on-culture':
-            if (
-                st.session_state.time_selected
-                in philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict
-            ):
-                normalized_show_name = 'whats-the-frequency-kenneth'
-            elif (
-                st.session_state.time_selected
-                in whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict
-            ):
-                st.session_state.time_selected = (
-                    whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict[
-                        st.session_state.time_selected
-                    ]
-                )
-        elif normalized_show_name == 'whats-the-frequency-kenneth':
-            if (
-                st.session_state.time_selected
-                in whats_the_frequency_kenneth_time_swap_and_philosophers_on_culture_dict
-            ):
-                normalized_show_name = 'philosophers-on-culture'
-            elif (
-                st.session_state.time_selected
-                in philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict
-            ):
-                st.session_state.time_selected = (
-                    philosophers_on_culture_and_whats_the_frequency_kenneth_time_swap_dict[
-                        st.session_state.time_selected
-                    ]
-                )
+        if st.session_state.time_selected in time_swap_dict:
+            st.session_state.time_selected = time_swap_dict[st.session_state.time_selected]
+            normalized_show_name = (
+                'whats-the-frequency-kenneth'
+                if normalized_show_name == 'philosophers-on-culture'
+                else 'philosophers-on-culture'
+            )
 
         url = (
             'https://kzfr-media.s3.us-west-000.backblazeb2.com/audio/'
@@ -480,8 +483,9 @@ if st.session_state.show_selected:
                 f'No show found at the date and time {st.session_state.time_selected}. '
                 'Please try again with new options.'
             )
+            st.stop()
 
-st.markdown('-----')
+st.markdown(body='-----')
 
 st.caption(
     'Find more about KZFR and their shows on their official website: '
@@ -490,7 +494,7 @@ st.caption(
 
 if st.first_time_running:
     # this just re-runs the app
-    st.markdown('<br>', unsafe_allow_html=True)
-    st.markdown('<br>', unsafe_allow_html=True)
-    st.markdown('<br>', unsafe_allow_html=True)
+    st.markdown(body='<br>', unsafe_allow_html=True)
+    st.markdown(body='<br>', unsafe_allow_html=True)
+    st.markdown(body='<br>', unsafe_allow_html=True)
     st.button('Reset search')
