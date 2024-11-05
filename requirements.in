@@ -1,4 +1,5 @@
 hurry.filesize
+numpy<2
 pandas
 requests
 streamlit
