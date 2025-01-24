@@ -26,18 +26,26 @@ st.set_page_config(
     }
 )
 
+# hide Streamlit style and center all images with custom CSS
+st.html(
+    body="""
+        <style>
+            div[data-testid="stImage"] {
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+            }
 
-hide_streamlit_style = """
-    <style>
-    div[data-testid="stImage"] {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    </style>
-"""
-
-st.markdown(body=hide_streamlit_style, unsafe_allow_html=True)
+            .stImage > div {
+                text-align: center;
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+                width: 100%;
+            }
+        </style>
+    """,
+)
 
 
 st.image(
@@ -121,7 +129,8 @@ def read_studio_creek_website_data() -> pd.DataFrame:
                     'name': item['show']['name'],
                     'summary': item['show']['summary'],
                     'description': item['show']['description'],
-                    'image_url': item['image']['url'],
+                    # 'image_url': item['image']['url'],
+                    'image_url': (item.get('image') or {}).get('url'),
                     'filesize': item['audio']['filesize'],
                     'url': item['audio']['url'],
                 }
@@ -174,7 +183,7 @@ def display_stream_with_metadata(
     st.markdown(body=f'##### {time_selected}')
 
     if image_url:
-        st.image(image=image_url)
+        st.image(image=image_url, width=350)
 
     if summary:
         st.markdown(
