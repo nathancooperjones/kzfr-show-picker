@@ -36,7 +36,8 @@ st.html(
                 margin-right: auto;
             }
 
-            .stImage > div {
+             /* so hacky omg but it works for now so whatever */
+            div[data-testid="stFullScreenFrame"] > div {
                 text-align: center;
                 display: block;
                 margin-left: auto;
@@ -315,8 +316,9 @@ if st.session_state.show_selected:
                         )
                     except IndexError:
                         st.error(
-                            f'No show found at the date and time {st.session_state.time_selected}. '
-                            'Please try again with new options.'
+                            'No show found at the date and time '
+                            f'`{st.session_state.time_selected}`. Please try again with new '
+                            'options.'
                         )
                         st.stop()
 
@@ -332,7 +334,7 @@ if st.session_state.show_selected:
                     )
                 else:
                     st.error(
-                        f'No show found at the date and time {st.session_state.time_selected}. '
+                        f'No show found at the date and time `{st.session_state.time_selected}`. '
                         'Please try again with new options.'
                     )
                     st.stop()
@@ -489,7 +491,7 @@ if st.session_state.show_selected:
             )
         else:
             st.error(
-                f'No show found at the date and time {st.session_state.time_selected}. '
+                f'No show found at the date and time `{st.session_state.time_selected}`. '
                 'Please try again with new options.'
             )
             st.stop()
